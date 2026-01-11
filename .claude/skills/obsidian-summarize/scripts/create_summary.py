@@ -31,6 +31,22 @@ def main():
     parser.add_argument("--future-work", default="", help="Future work directions")
     parser.add_argument("--personal-notes", default="", help="Your personal notes")
     parser.add_argument("--tags", default="", help="Comma-separated tags")
+    parser.add_argument(
+        "--auto",
+        action="store_true",
+        help="Auto-generate summary using Claude API",
+    )
+    parser.add_argument(
+        "--lang",
+        default="ko",
+        choices=["ko", "en"],
+        help="Summary language (ko=Korean, en=English)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing note without confirmation",
+    )
 
     args = parser.parse_args()
 
@@ -67,12 +83,18 @@ def main():
 
     # Check if note already exists
     existing = writer.note_exists(args.arxiv_id)
-    if existing:
+    if existing and not args.force:
         print(f"Note already exists: {existing}")
-        response = input("Overwrite? [y/N]: ").strip().lower()
-        if response != "y":
-            print("Aborted.")
-            sys.exit(0)
+        try:
+            response = input("Overwrite? [y/N]: ").strip().lower()
+            if response != "y":
+                print("Aborted.")
+                sys.exit(0)
+        except EOFError:
+            print("Use --force to overwrite in non-interactive mode.")
+            sys.exit(1)
+    elif existing:
+        print(f"Overwriting existing note: {existing}")
 
     # Parse list fields
     authors = [a.strip() for a in args.authors.split(",") if a.strip()]
@@ -83,6 +105,45 @@ def main():
         else None
     )
 
+    # Auto-generate summary using Claude API
+    summary = args.summary
+    methodology = args.methodology
+    contributions = args.contributions
+    limitations = args.limitations
+    future_work = args.future_work
+
+    if args.auto:
+        if not args.abstract:
+            print(
+                "Error: --abstract is required for auto-summarization",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        print("Generating summary using Claude API...")
+        try:
+            from summarizer import PaperSummarizer
+
+            summarizer = PaperSummarizer()
+            result = summarizer.summarize(
+                title=args.title,
+                authors=authors,
+                abstract=args.abstract,
+                language=args.lang,
+            )
+
+            summary = result.summary
+            key_findings = result.key_findings
+            methodology = result.methodology
+            contributions = result.contributions
+            limitations = result.limitations
+            future_work = result.future_work
+
+            print("Summary generated successfully!")
+        except Exception as e:
+            print(f"Error generating summary: {e}", file=sys.stderr)
+            print("Falling back to manual mode...", file=sys.stderr)
+
     # Create summary
     try:
         filepath = writer.create_summary(
@@ -91,12 +152,12 @@ def main():
             authors=authors,
             abstract=args.abstract,
             zotero_key=args.zotero_key if args.zotero_key else None,
-            summary=args.summary if args.summary else None,
+            summary=summary if summary else None,
             key_findings=key_findings,
-            methodology=args.methodology if args.methodology else None,
-            contributions=args.contributions if args.contributions else None,
-            limitations=args.limitations if args.limitations else None,
-            future_work=args.future_work if args.future_work else None,
+            methodology=methodology if methodology else None,
+            contributions=contributions if contributions else None,
+            limitations=limitations if limitations else None,
+            future_work=future_work if future_work else None,
             personal_notes=args.personal_notes if args.personal_notes else None,
             tags=tags if tags else None,
             published=args.published if args.published else None,
