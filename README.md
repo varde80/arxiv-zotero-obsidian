@@ -12,10 +12,34 @@ Claude Code 기반의 AI 에이전트로, 학술 논문 워크플로우를 자�
 
 ## 설치
 
-### 1. 의존성 설치
+### 방법 A: uv 사용 (추천)
 
 ```bash
-cd /Users/varde/code/arxiv-zotero-obsidian
+# 프로젝트 클론
+git clone https://github.com/varde80/arxiv-zotero-obsidian.git
+cd arxiv-zotero-obsidian
+
+# uv로 설치 (가상환경 자동 생성)
+uv sync
+
+# 또는 개발 의존성 포함
+uv sync --all-extras
+```
+
+**uv 명령어로 실행:**
+```bash
+uv run arxiv-search --query "deep learning"
+uv run zotero-add --arxiv-id "1706.03762" --title "..." --authors "..."
+uv run obsidian-summarize --arxiv-id "1706.03762" --title "..." --authors "..."
+```
+
+### 방법 B: pip 사용
+
+```bash
+cd arxiv-zotero-obsidian
+pip install -e .
+
+# 또는 의존성만 설치
 pip install arxiv pyzotero python-dotenv rich
 ```
 
