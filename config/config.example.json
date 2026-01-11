@@ -1,0 +1,17 @@
+{
+  "arxiv": {
+    "delay_seconds": 3.0,
+    "default_max_results": 10,
+    "download_dir": "./downloads"
+  },
+  "zotero": {
+    "library_id": "YOUR_USER_ID",
+    "library_type": "user",
+    "api_key": "${ZOTERO_API_KEY}",
+    "default_collection": "arXiv Papers"
+  },
+  "obsidian": {
+    "vault_path": "/path/to/your/vault",
+    "papers_folder": "Papers"
+  }
+}
