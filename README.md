@@ -22,30 +22,32 @@ cd arxiv-zotero-obsidian
 # uv로 설치 (가상환경 자동 생성)
 uv sync
 
-# 또는 개발 의존성 포함
-uv sync --all-extras
-```
-
-**uv 명령어로 실행:**
-```bash
-uv run arxiv-search --query "deep learning"
-uv run zotero-add --arxiv-id "1706.03762" --title "..." --authors "..."
-uv run obsidian-summarize --arxiv-id "1706.03762" --title "..." --authors "..."
+# 개발 의존성 포함
+uv sync --group dev
 ```
 
 ### 방법 B: pip 사용
 
 ```bash
+git clone https://github.com/varde80/arxiv-zotero-obsidian.git
 cd arxiv-zotero-obsidian
+
+# 패키지로 설치
 pip install -e .
 
 # 또는 의존성만 설치
 pip install arxiv pyzotero python-dotenv rich
 ```
 
-### 2. 설정 파일 구성
+### 설정 파일 구성
 
-**config/config.json:**
+**1. 설정 파일 생성:**
+```bash
+cp config/config.example.json config/config.json
+cp .env.example .env
+```
+
+**2. config/config.json 수정:**
 ```json
 {
   "arxiv": {
@@ -66,15 +68,14 @@ pip install arxiv pyzotero python-dotenv rich
 }
 ```
 
-**.env 파일:**
+**3. .env 파일 수정:**
 ```bash
 ZOTERO_API_KEY=your_api_key_here
 ```
 
-### 3. Zotero 설정 확인
-
+**4. Zotero 설정 확인:**
 1. https://www.zotero.org/settings/keys 접속
-2. API Key 생성 (Read/Write 권한)
+2. API Key 생성 (Read/Write 권한 + 파일 접근 권한)
 3. "Your userID for use in API calls is XXXXXX" 확인 → `library_id`에 입력
 
 ---
@@ -91,39 +92,61 @@ Claude Code에서 자연어로 요청하면 자동으로 Skills가 실행됩니�
 "저장한 논문 Obsidian에 요약해줘"
 ```
 
-### 방법 2: 직접 스크립트 실행
-
-#### 논문 검색
+### 방법 2: uv run 명령어
 
 ```bash
-# 기본 검색
+# 논문 검색
+uv run arxiv-search --query "deep learning" --max-results 5
+
+# Zotero에 추가
+uv run zotero-add \
+  --arxiv-id "1706.03762" \
+  --title "Attention Is All You Need" \
+  --authors "Ashish Vaswani,Noam Shazeer"
+
+# Obsidian에 요약
+uv run obsidian-summarize \
+  --arxiv-id "1706.03762" \
+  --title "Attention Is All You Need" \
+  --authors "Ashish Vaswani,Noam Shazeer" \
+  --summary "Transformer 아키텍처 제안"
+```
+
+### 방법 3: 직접 스크립트 실행
+
+```bash
+# 논문 검색
 python3 .claude/skills/arxiv-search/scripts/search_arxiv.py \
   --query "deep learning"
 
-# 옵션 포함 검색
-python3 .claude/skills/arxiv-search/scripts/search_arxiv.py \
-  --query "large language models" \
-  --max-results 5 \
-  --category "cs.CL" \
-  --date-from "2024-01-01" \
-  --sort-by "submitted_date"
+# Zotero에 추가
+python3 .claude/skills/zotero-add/scripts/add_to_zotero.py \
+  --arxiv-id "1706.03762" \
+  --title "Attention Is All You Need" \
+  --authors "Ashish Vaswani,Noam Shazeer"
 
-# JSON 출력
-python3 .claude/skills/arxiv-search/scripts/search_arxiv.py \
-  --query "attention mechanism" \
-  --output json
+# Obsidian에 요약
+python3 .claude/skills/obsidian-summarize/scripts/create_summary.py \
+  --arxiv-id "1706.03762" \
+  --title "Attention Is All You Need" \
+  --authors "Ashish Vaswani,Noam Shazeer"
 ```
 
-**검색 옵션:**
-| 옵션 | 설명 | 예시 |
-|------|------|------|
-| `--query` | 검색어 (필수) | "transformer" |
+---
+
+## 명령어 옵션
+
+### arxiv-search
+
+| 옵션 | 설명 | 기본값 |
+|------|------|--------|
+| `--query` | 검색어 (필수) | - |
 | `--max-results` | 결과 수 | 10 |
-| `--category` | arXiv 카테고리 | cs.AI, cs.LG, physics.cond-mat |
-| `--date-from` | 시작 날짜 | 2024-01-01 |
-| `--date-to` | 종료 날짜 | 2024-12-31 |
-| `--sort-by` | 정렬 기준 | relevance, submitted_date, last_updated |
-| `--output` | 출력 형식 | text, json |
+| `--category` | arXiv 카테고리 | - |
+| `--date-from` | 시작 날짜 (YYYY-MM-DD) | - |
+| `--date-to` | 종료 날짜 (YYYY-MM-DD) | - |
+| `--sort-by` | 정렬: relevance, submitted_date, last_updated | relevance |
+| `--output` | 출력 형식: text, json | text |
 
 **검색 쿼리 문법:**
 - `ti:keyword` - 제목에서 검색
@@ -132,27 +155,14 @@ python3 .claude/skills/arxiv-search/scripts/search_arxiv.py \
 - `cat:category` - 카테고리 필터
 
 ```bash
-# 저자로 검색
-python3 .claude/skills/arxiv-search/scripts/search_arxiv.py --query "au:Hinton"
-
-# 제목 + 초록 조합
-python3 .claude/skills/arxiv-search/scripts/search_arxiv.py --query "ti:transformer AND abs:attention"
+# 예시
+uv run arxiv-search --query "au:Hinton"
+uv run arxiv-search --query "ti:transformer AND abs:attention"
+uv run arxiv-search --query "large language models" --category "cs.CL" --date-from "2024-01-01"
 ```
 
-#### Zotero에 논문 추가
+### zotero-add
 
-```bash
-python3 .claude/skills/zotero-add/scripts/add_to_zotero.py \
-  --arxiv-id "1706.03762" \
-  --title "Attention Is All You Need" \
-  --authors "Ashish Vaswani,Noam Shazeer,Niki Parmar" \
-  --abstract "The dominant sequence transduction models..." \
-  --published "2017-06-12" \
-  --collection "Transformers" \
-  --tags "transformer,attention,nlp"
-```
-
-**Zotero 옵션:**
 | 옵션 | 설명 | 필수 |
 |------|------|------|
 | `--arxiv-id` | arXiv 논문 ID | O |
@@ -165,22 +175,8 @@ python3 .claude/skills/zotero-add/scripts/add_to_zotero.py \
 | `--skip-pdf` | PDF 다운로드 건너뛰기 | X |
 | `--doi` | DOI | X |
 
-#### Obsidian에 요약 노트 생성
+### obsidian-summarize
 
-```bash
-python3 .claude/skills/obsidian-summarize/scripts/create_summary.py \
-  --arxiv-id "1706.03762" \
-  --title "Attention Is All You Need" \
-  --authors "Ashish Vaswani,Noam Shazeer,Niki Parmar" \
-  --abstract "The dominant sequence transduction models..." \
-  --published "2017-06-12" \
-  --zotero-key "ZKPFEBEH" \
-  --summary "Transformer 아키텍처 제안. Self-attention으로 시퀀스 처리." \
-  --key-findings "Self-attention이 RNN 대체|병렬 학습 가능|번역 SOTA" \
-  --tags "transformer,attention,nlp"
-```
-
-**Obsidian 옵션:**
 | 옵션 | 설명 | 필수 |
 |------|------|------|
 | `--arxiv-id` | arXiv 논문 ID | O |
@@ -192,10 +188,6 @@ python3 .claude/skills/obsidian-summarize/scripts/create_summary.py \
 | `--summary` | 요약 내용 | X |
 | `--key-findings` | 핵심 발견 (파이프 구분) | X |
 | `--methodology` | 방법론 | X |
-| `--contributions` | 주요 기여 | X |
-| `--limitations` | 한계점 | X |
-| `--future-work` | 향후 연구 방향 | X |
-| `--personal-notes` | 개인 메모 | X |
 | `--tags` | 태그 (쉼표 구분) | X |
 
 ---
@@ -204,17 +196,14 @@ python3 .claude/skills/obsidian-summarize/scripts/create_summary.py \
 
 ```bash
 # 1. 논문 검색
-python3 .claude/skills/arxiv-search/scripts/search_arxiv.py \
-  --query "state space models" \
-  --max-results 3
+uv run arxiv-search --query "state space models" --max-results 3
 
 # 출력:
 # [1] Mamba: Linear-Time Sequence Modeling...
 #     arXiv ID: 2312.00752
-#     ...
 
-# 2. 원하는 논문 Zotero에 추가
-python3 .claude/skills/zotero-add/scripts/add_to_zotero.py \
+# 2. 원하는 논문 Zotero에 추가 (PDF 자동 첨부)
+uv run zotero-add \
   --arxiv-id "2312.00752" \
   --title "Mamba: Linear-Time Sequence Modeling with Selective State Spaces" \
   --authors "Albert Gu,Tri Dao" \
@@ -225,13 +214,16 @@ python3 .claude/skills/zotero-add/scripts/add_to_zotero.py \
 # PDF attached successfully
 
 # 3. Obsidian에 요약 노트 생성
-python3 .claude/skills/obsidian-summarize/scripts/create_summary.py \
+uv run obsidian-summarize \
   --arxiv-id "2312.00752" \
   --title "Mamba: Linear-Time Sequence Modeling with Selective State Spaces" \
   --authors "Albert Gu,Tri Dao" \
   --zotero-key "7ASRMNCJ" \
   --summary "Selective SSM을 제안하여 Transformer의 대안 제시" \
   --key-findings "선형 시간 복잡도|선택적 상태 공간|긴 시퀀스 처리 효율적"
+
+# 출력:
+# Created: /path/to/vault/Papers/2026-01-11-mamba-linear-time-sequence.md
 ```
 
 ---
@@ -241,18 +233,23 @@ python3 .claude/skills/obsidian-summarize/scripts/create_summary.py \
 ```
 arxiv-zotero-obsidian/
 ├── .claude/skills/           # Claude Code Skills
-│   ├── arxiv-search/         # 논문 검색
-│   ├── zotero-add/           # Zotero 추가
-│   └── obsidian-summarize/   # Obsidian 요약
+│   ├── arxiv-search/         # 논문 검색 skill
+│   ├── zotero-add/           # Zotero 추가 skill
+│   └── obsidian-summarize/   # Obsidian 요약 skill
 ├── src/                      # 핵심 모듈
 │   ├── arxiv_client.py       # arXiv API 클라이언트
 │   ├── zotero_client.py      # Zotero API 클라이언트
 │   ├── obsidian_writer.py    # Obsidian 마크다운 생성
-│   └── config.py             # 설정 관리
+│   ├── config.py             # 설정 관리
+│   └── cli.py                # CLI 엔트리포인트
 ├── config/
-│   └── config.json           # 설정 파일
+│   ├── config.json           # 설정 파일 (git 제외)
+│   └── config.example.json   # 설정 예시
 ├── downloads/                # 다운로드된 PDF
-└── .env                      # API 키 (git 제외)
+├── pyproject.toml            # 프로젝트 설정
+├── uv.lock                   # uv 의존성 잠금
+├── .env                      # API 키 (git 제외)
+└── .env.example              # 환경변수 예시
 ```
 
 ---
@@ -286,13 +283,22 @@ Error: Zotero API key not configured
 ```
 Warning: Failed to attach PDF
 ```
-→ Zotero API Key에 파일 업로드 권한 확인
+→ Zotero API Key 생성 시 "Allow library access" 및 "Allow write access" 권한 확인
 
 ### Obsidian 경로 오류
 ```
 Error: Obsidian vault not found
 ```
-→ `config/config.json`의 `vault_path` 경로 확인
+→ `config/config.json`의 `vault_path`가 실제 Obsidian vault 경로인지 확인
+
+### uv 설치
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
 
 ---
 
