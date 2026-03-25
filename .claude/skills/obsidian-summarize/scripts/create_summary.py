@@ -43,6 +43,11 @@ def main():
         help="Summary language (ko=Korean, en=English)",
     )
     parser.add_argument(
+        "--subfolder",
+        default="",
+        help="Subfolder within Papers/ (e.g., collection name)",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Overwrite existing note without confirmation",
@@ -82,7 +87,9 @@ def main():
     )
 
     # Check if note already exists
-    existing = writer.note_exists(args.arxiv_id)
+    existing = writer.note_exists(
+        args.arxiv_id, subfolder=args.subfolder if args.subfolder else None
+    )
     if existing and not args.force:
         print(f"Note already exists: {existing}")
         try:
@@ -161,6 +168,7 @@ def main():
             personal_notes=args.personal_notes if args.personal_notes else None,
             tags=tags if tags else None,
             published=args.published if args.published else None,
+            subfolder=args.subfolder if args.subfolder else None,
         )
 
         print(f"\nCreated summary note:")

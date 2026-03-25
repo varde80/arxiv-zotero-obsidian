@@ -55,6 +55,7 @@ class ObsidianWriter:
         personal_notes: Optional[str] = None,
         tags: Optional[List[str]] = None,
         published: Optional[str] = None,
+        subfolder: Optional[str] = None,
     ) -> str:
         """Create a paper summary markdown file.
 
@@ -80,7 +81,14 @@ class ObsidianWriter:
         date_str = datetime.now().strftime("%Y-%m-%d")
         slug = self.slugify(title)
         filename = f"{date_str}-{slug}.md"
-        filepath = self.papers_folder / filename
+
+        if subfolder:
+            target_dir = self.papers_folder / subfolder
+            target_dir.mkdir(parents=True, exist_ok=True)
+        else:
+            target_dir = self.papers_folder
+
+        filepath = target_dir / filename
 
         # Build frontmatter
         tag_list = tags or []
@@ -173,18 +181,26 @@ status: "unread"
         """Escape special characters for YAML strings."""
         return text.replace('"', '\\"').replace("\n", " ")
 
-    def note_exists(self, arxiv_id: str) -> Optional[str]:
+    def note_exists(
+        self, arxiv_id: str, subfolder: Optional[str] = None
+    ) -> Optional[str]:
         """Check if a note for the given paper already exists.
 
         Args:
             arxiv_id: arXiv paper ID.
+            subfolder: Optional subfolder within papers folder.
 
         Returns:
             Path to existing note if found, None otherwise.
         """
-        for note_file in self.papers_folder.glob("*.md"):
+        search_dir = (
+            self.papers_folder / subfolder if subfolder else self.papers_folder
+        )
+        if not search_dir.exists():
+            return None
+        for note_file in search_dir.glob("*.md"):
             with open(note_file, encoding="utf-8") as f:
-                content = f.read(500)  # Read first 500 chars for frontmatter
+                content = f.read(500)
                 if f'arxiv_id: "{arxiv_id}"' in content:
                     return str(note_file)
         return None

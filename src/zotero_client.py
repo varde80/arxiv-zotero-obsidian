@@ -1,5 +1,7 @@
 """Zotero API client for managing papers in Zotero library."""
 
+import shutil
+import sys
 from pathlib import Path
 from typing import List, Optional
 
@@ -192,3 +194,108 @@ class ZoteroClient:
             List of matching items.
         """
         return self.zot.items(q=query)
+
+    def get_collection_items(
+        self, collection_key: str, top_level: bool = True
+    ) -> List[dict]:
+        """Get all items in a collection, with full pagination.
+
+        Uses pyzotero's everything() to retrieve all pages, not just the first.
+
+        Args:
+            collection_key: Zotero collection key.
+            top_level: If True, return only top-level items (no attachments).
+
+        Returns:
+            List of item data dicts (all pages combined).
+        """
+        if top_level:
+            return self.zot.everything(
+                self.zot.collection_items_top(collection_key)
+            )
+        return self.zot.everything(
+            self.zot.collection_items(collection_key)
+        )
+
+    def get_collection_key_by_name(self, name: str) -> Optional[str]:
+        """Find a collection key by its name. Uses _collection_cache.
+
+        Args:
+            name: Collection name to search for.
+
+        Returns:
+            Collection key or None if not found.
+        """
+        if name in self._collection_cache:
+            return self._collection_cache[name]
+
+        collections = self.zot.collections()
+        for col in collections:
+            if col["data"]["name"] == name:
+                self._collection_cache[name] = col["data"]["key"]
+                return col["data"]["key"]
+        return None
+
+    def get_item_children(self, item_key: str) -> List[dict]:
+        """Get child items (attachments, notes) for an item.
+
+        Args:
+            item_key: Parent item key.
+
+        Returns:
+            List of child item dicts.
+        """
+        return self.zot.children(item_key)
+
+    def download_attachment(
+        self,
+        item_key: str,
+        dest_dir: str,
+        item_data: Optional[dict] = None,
+    ) -> Optional[str]:
+        """Download an attachment file from Zotero.
+
+        Tries zot.dump() for stored files first. If that fails and item_data
+        contains a local path (linked file), falls back to copying that file.
+
+        Args:
+            item_key: Attachment item key.
+            dest_dir: Directory to save the file.
+            item_data: Optional attachment item dict for linked file fallback.
+
+        Returns:
+            Path to downloaded file or None.
+        """
+        dest = Path(dest_dir)
+        dest.mkdir(parents=True, exist_ok=True)
+
+        item_dest = dest / item_key
+        item_dest.mkdir(parents=True, exist_ok=True)
+
+        try:
+            self.zot.dump(item_key, path=str(item_dest))
+            files = list(item_dest.glob("*"))
+            if files:
+                return str(files[0])
+        except Exception as e:
+            print(
+                f"Stored file download failed for {item_key}: {e}",
+                file=sys.stderr,
+            )
+
+        if (
+            item_data
+            and item_data.get("data", {}).get("linkMode") == "linked_file"
+        ):
+            local_path = item_data.get("data", {}).get("path", "")
+            if local_path and Path(local_path).exists():
+                dest_file = item_dest / Path(local_path).name
+                shutil.copy2(local_path, dest_file)
+                return str(dest_file)
+            else:
+                print(
+                    f"Linked file not found at: {local_path}",
+                    file=sys.stderr,
+                )
+
+        return None
