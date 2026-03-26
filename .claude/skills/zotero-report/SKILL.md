@@ -4,7 +4,7 @@ description: >
   Generate comprehensive research reports from Zotero collections with Obsidian integration.
   Supports 3 modes: (1) existing collection, (2) collection + arXiv extension,
   (3) topic search from scratch. Creates per-paper Obsidian summary notes.
-  Export to MD/DOCX/PDF/HWPX.
+  Export to MD/DOCX/PDF/HWPX. Language selection: Korean (ko) or English (en).
   Use when users want literature reviews, research trend analysis, or paper summaries.
 allowed-tools: Read,Bash,Write
 ---
@@ -29,13 +29,18 @@ Detect format:
 - "PDF로", "워드로", "hwpx로" → that format
 - Default: Markdown
 
+Detect language:
+- "영어로", "in English", "English report" → `--language en`
+- "한글로", "한국어로", or default → `--language ko`
+- Default: `ko`
+
 ## Mode 1: Collection-Only
 
 ### Phase 1 - Data Collection
 ```bash
 cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
   .claude/skills/zotero-report/scripts/generate_report.py \
-  --mode collection --collection "COLLECTION_NAME"
+  --mode collection --collection "COLLECTION_NAME" --language {ko|en}
 ```
 
 For deeper analysis with full text:
@@ -43,7 +48,7 @@ For deeper analysis with full text:
 cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
   .claude/skills/zotero-report/scripts/generate_report.py \
   --mode collection --collection "COLLECTION_NAME" \
-  --include-full-text --max-chars-per-paper 10000
+  --include-full-text --max-chars-per-paper 10000 --language {ko|en}
 ```
 
 ### Phase 2 - Analysis
@@ -52,7 +57,8 @@ Read the JSON output. For each paper:
 - Identify cross-cutting themes, methodological patterns, research gaps
 
 ### Phase 3 - Report Writing
-Use `templates/report_template.md` as guide. Write Markdown report and save as `{collection_name}-report.md`.
+Use `templates/report_template_{language}.md` as guide (where `{language}` is from the JSON output's `language` field: `ko` or `en`).
+Write the entire report in the detected language. Save as `{collection_name}-report.md`.
 
 ### Phase 4 - Obsidian Notes
 For each paper in the JSON, create an Obsidian summary note:
@@ -71,7 +77,7 @@ cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
 cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
   .claude/skills/zotero-report/scripts/export_report.py \
   --input {name}-report.md --format {docx|pdf|hwpx} \
-  --output {name}-report.{ext}
+  --output {name}-report.{ext} --language {ko|en}
 ```
 
 ## Mode 2: Collection + Extension
@@ -80,7 +86,7 @@ cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
 ```bash
 cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
   .claude/skills/zotero-report/scripts/generate_report.py \
-  --mode extend --collection "COLLECTION_NAME"
+  --mode extend --collection "COLLECTION_NAME" --language {ko|en}
 ```
 
 ### Phase 1b - Search arXiv using suggested queries
@@ -105,7 +111,7 @@ cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
 ```bash
 cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
   .claude/skills/zotero-report/scripts/generate_report.py \
-  --mode collection --collection "COLLECTION_NAME"
+  --mode collection --collection "COLLECTION_NAME" --language {ko|en}
 ```
 
 ### Phase 2-5: Same as Mode 1
@@ -133,7 +139,7 @@ cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
 ```bash
 cd /Users/varde/code/arxiv-zotero-obsidian && python3 \
   .claude/skills/zotero-report/scripts/generate_report.py \
-  --mode collection --collection "TOPIC_AS_COLLECTION_NAME"
+  --mode collection --collection "TOPIC_AS_COLLECTION_NAME" --language {ko|en}
 ```
 
 ### Phase 2-5: Same as Mode 1

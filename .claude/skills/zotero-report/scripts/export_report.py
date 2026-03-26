@@ -15,8 +15,12 @@ def export_to_docx(input_md: str, output: str) -> None:
     )
 
 
-def export_to_pdf(input_md: str, output: str) -> None:
-    """Convert MD to PDF using pandoc + xelatex (Korean support)."""
+def export_to_pdf(input_md: str, output: str, language: str = "ko") -> None:
+    """Convert MD to PDF using pandoc + xelatex (with language-aware font)."""
+    font_args = []
+    if language == "ko":
+        font_args = ["-V", "mainfont=NanumGothicOTF"]
+
     subprocess.run(
         [
             "pandoc",
@@ -25,8 +29,7 @@ def export_to_pdf(input_md: str, output: str) -> None:
             output,
             "--from=markdown",
             "--pdf-engine=xelatex",
-            "-V",
-            "mainfont=NanumGothicOTF",
+            *font_args,
             "-V",
             "geometry:margin=2.5cm",
         ],
@@ -67,6 +70,12 @@ def main() -> None:
         help="Output format",
     )
     parser.add_argument("--output", required=True, help="Output file path")
+    parser.add_argument(
+        "--language",
+        default="ko",
+        choices=["ko", "en"],
+        help="Report language for font selection (default: ko)",
+    )
 
     args = parser.parse_args()
 
@@ -78,7 +87,10 @@ def main() -> None:
     exporter = EXPORTERS[args.format]
 
     try:
-        exporter(args.input, args.output)
+        if args.format == "pdf":
+            exporter(args.input, args.output, language=args.language)
+        else:
+            exporter(args.input, args.output)
         print(f"Exported: {args.output}")
     except FileNotFoundError as e:
         tool = "pandoc" if args.format in ("docx", "pdf") else "hwpx-convert"

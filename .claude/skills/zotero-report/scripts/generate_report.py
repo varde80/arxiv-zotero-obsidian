@@ -93,6 +93,7 @@ def process_collection(
     include_full_text: bool = False,
     max_chars_per_paper: int = 10000,
     mode: str = "collection",
+    language: str = "ko",
 ) -> dict:
     """Process a Zotero collection and return structured data."""
     items = client.get_collection_items(collection_key)
@@ -158,6 +159,7 @@ def process_collection(
 
     result = {
         "mode": mode,
+        "language": language,
         "collection_name": collection_name,
         "collection_key": collection_key,
         "total_items": len(papers),
@@ -213,6 +215,12 @@ def main() -> None:
         default=10000,
         help="Max chars per paper for full text (default: 10000)",
     )
+    parser.add_argument(
+        "--language",
+        default="ko",
+        choices=["ko", "en"],
+        help="Report language (default: ko)",
+    )
 
     args = parser.parse_args()
 
@@ -261,6 +269,7 @@ def main() -> None:
         include_full_text=args.include_full_text,
         max_chars_per_paper=args.max_chars_per_paper,
         mode=args.mode,
+        language=args.language,
     )
 
     json.dump(result, sys.stdout, ensure_ascii=False, indent=2)
